@@ -1,0 +1,73 @@
+<project name="pps" default="all" basedir=".">
+
+  <property file="build.properties" />
+    
+  <path id="class.path">
+    <pathelement location="${classes.dir}"/>
+    <pathelement path="${servlet.jar}" />
+    <fileset dir="${lib.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+   </path>
+
+  <target name="prepare" description="prepares project for building">
+  </target>
+
+  <target name="clean" depends="prepare">
+    <delete dir="${classes.dir}"/>
+    <delete dir="${classes.client.dir}"/>
+    <!-- delete backup files -->
+    <delete verbose="true">
+      <fileset dir="." defaultexcludes="no" includes="**/*~" />
+    </delete>
+  </target>
+
+  <target name="compile.client" depends="prepare" description="compiles source files of the client, jars them and places them in a lib.">
+    <mkdir dir="${classes.client.dir}" />
+    <javac srcdir="${src.client.dir}"
+           destdir="${classes.client.dir}"
+           classpathref="class.path" />
+     <delete file="${client.jar}" />
+		<jar jarfile="${client.jar}" basedir="${classes.client.dir}">
+		</jar>
+ </target>
+
+
+  <target name="run.client" depends="compile.client" description="runs testclass">
+    <java classname="${runclient.class}" classpathref="class.path" fork="yes">
+			<classpath>
+				<pathelement location="${client.jar}" />
+			</classpath>
+		</java>
+	</target>
+
+  <target name="compile.server" depends="prepare"  
+          description="compiles and creates war file">
+    <mkdir dir="${classes.dir}" />
+    <javac srcdir="${src.dir}"
+           destdir="${classes.dir}"
+           classpathref="class.path" />
+    <delete file="${context.root}.war" />
+    <war warfile="${context.root}.war"  webxml="${webinf.dir}/web.xml"   manifest="${webcontent.dir}/META-INF/MANIFEST.MF" >
+      <fileset dir="${webcontent.dir}" excludes="META-INF/MANIFEST.MF" />
+      <lib dir="${lib.dir}" includes="**/*.jar"/>
+      <classes dir="${classes.dir}"/>
+      <webinf dir="${webinf.dir}" includes="**/*.xml,**/*.xsl,**/*.tld" excludes="web.xml" />
+    </war>
+  </target>
+
+  <target name="unwar" description="unwars the created war to test the creation">
+   <mkdir dir="${test.war.dir}" />
+   <delete dir="${test.war.dir}" />
+  <unzip src="${context.root}.war" dest="${test.war.dir}"/>
+  </target>
+  
+  <target name="deploy" depends="compile.server"
+          description="deploy application to tomcat">
+       <delete dir="${tomcat.deploy.dir}/${context.root}" />
+    <move file="${context.root}.war"
+          todir="${tomcat.deploy.dir}" />
+  </target>	
+
+  <target name="all" depends="clean,compile.client,compile.server" />
+</project>
